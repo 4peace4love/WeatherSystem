@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>河海大学天气采集系统</title>
+    <link rel="stylesheet" th:href="@{/static/layui/css/layui.css}" />
+    <link rel="stylesheet" th:href="@{/static/css/simple-calendar.css}" />
+</head>
+<body class="layui-layout-body">
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo">河海大学天气采集系统</div>
+        <!-- 头部区域（可配合layui已有的水平导航） -->
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;">
+                    <img src="http://t.cn/RCzsdCq" class="layui-nav-img">
+                    贤心
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="">基本资料</a></dd>
+                    <dd><a href="">安全设置</a></dd>
+                </dl>
+            </li>
+            <li class="layui-nav-item"><a href="/logout">退出</a></li>
+        </ul>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+            <ul class="layui-nav layui-nav-tree"  lay-filter="test">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a class="" href="javascript:;">城市管理</a>
+                    <dl class="layui-nav-child">
+                        <dd class="layui-this"><a href="/city/index">查看城市</a></dd>
+                    </dl>
+                </li>
+                <!--<li class="layui-nav-item">-->
+                    <!--<a href="javascript:;">日志管理</a>-->
+                    <!--<dl class="layui-nav-child">-->
+                        <!--<dd><a href="/weather/list">采集日志</a></dd>-->
+                    <!--</dl>-->
+                <!--</li>-->
+            </ul>
+        </div>
+    </div>
+
+    <div class="layui-body" style="background-color:white">
+
+        <!-- 内容主体区域 -->
+        <div class="layui-form">
+            <div class="layui-form-item">
+                <label class="layui-form-label">添加城市</label>
+                <div class="layui-input-inline">
+                    <select id="province" lay-filter='province_select'>
+                        <option value="" selected="">请选择省</option>
+                    </select>
+                </div>
+                <div class="layui-input-inline">
+                    <select id="city" lay-filter='city_select'>
+                        <option value="">请选择市</option>
+                    </select>
+                </div>
+                <button class="layui-btn layui-btn-warm" id="city_add">添加</button>
+                <a class="layui-btn layui-btn-warm" id="download_all" href="/weather/download?cityName=all">打包下载所有数据</a>
+            </div>
+            <table class="layui-table">
+                <colgroup>
+                    <col width="150">
+                    <col width="150">
+                    <col width="200">
+                    <col>
+                </colgroup>
+                <thead>
+                <tr>
+                    <th>id</th>
+                    <th>省份</th>
+                    <th>城市名</th>
+                    <th>添加时间</th>
+                    <th>城市代号</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="city : ${city_list}">
+                    <td th:text="${city.id}">1</td>
+                    <td th:text="${city.province}">四川省</td>
+                    <td th:text="${city.cityName}">泸州市</td>
+                    <td th:text="${city.insertDate}">2019-04-01</td>
+                    <td th:text="${city.cityId}">130010</td>
+                    <td>
+                        <button class="layui-btn layui-btn-sm calendar" data-method="setTop" th:attr="data-togo=${city.cityName}"><i class="layui-icon">&#xe637;</i></button>
+                        <button class="layui-btn layui-btn-sm delete" th:attr="data-togo=${city.cityId}"><i class="layui-icon">&#xe640;</i></button>
+                        <a class="layui-btn layui-btn-sm download" th:href="'/weather/download?cityName='+${city.cityName}"><i class="layui-icon">&#xe601;</i></a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+    </div>
+
+    <div class="layui-footer">
+        <!-- 底部固定区域 -->
+        © Hehai University
+    </div>
+</div>
+</body>
+<div id='container'></div>
+<script th:src="@{/static/js/jquery.js}"></script>
+<script th:src="@{/static/layui/layui.js}"></script>
+<script th:src="@{/static/js/date.js}"></script>
+<script th:src="@{/static/js/simple-calendar.js}"></script>
+<script>
+
+    var select_add_cityid = "";
+
+    //JavaScript代码区域
+    layui.use(['element','layer','form'], function(){
+        var $ = layui.$
+        var element = layui.element,
+            form = layui.form,
+            layer = layui.layer;
+        //加载省份
+        $.ajax({
+            type: 'GET',
+            url: "/api/region/findAllProvince",
+            dataType: "json",
+            success: function (retData) {
+                if(retData.code == 200000){
+                    res = retData.result
+                    content = "<option value='' selected=''>请选择省</option>";
+                    for (i in res){
+                        item1 = "<option value='"+ res[i].provinceid+"'>" + res[i].province +"</option>";
+                        content += item1
+                    }
+                    console.log(content)
+                    $("#province").html(content);
+                    form.on('select(province_select)', function(data){
+                        console.log(data.value)
+                        $.ajax({
+                            type: 'GET',
+                            url: "/api/region/findAllCityOfProvince/"+data.value,
+                            dataType: "json",
+                            success: function (cityData) {
+                                console.log(cityData)
+                                cityRes = cityData.result
+                                cityContent = "<option value='' selected=''>请选择市</option>";
+                                for (i in cityRes){
+                                    item1 = "<option value='"+ cityRes[i].cityid+"'>" + cityRes[i].city +"</option>";
+                                    cityContent += item1
+                                }
+                                $("#city").html(cityContent);
+                                form.on('select(city_select)', function(data){
+                                    //设置城市id
+                                    select_add_cityid = data.value;
+                                });
+                                form.render();
+                            }
+                        });
+                    });
+                    form.render();
+                }else {
+                    // console.log("server error");
+                }
+            },
+            error:function(){
+                // console.log("ajax error")
+            }
+        });
+        element.render();
+    });
+</script>
+<script>
+    var options = {
+        width: '400px',
+        height: '400px',
+        language: 'CH', //语言
+        showLunarCalendar: false, //阴历
+        showHoliday: false, //休假
+        showFestival: false, //节日
+        showLunarFestival: false, //农历节日
+        showSolarTerm: false, //节气
+        showMark: true, //标记
+        timeRange: {
+            startYear: 1900,
+            endYear: 2049
+        },
+        mark: {
+            '2016-5-5': '上学'
+        },
+        theme: {
+            changeAble: false,
+            weeks: {
+                backgroundColor: '#FBEC9C',
+                fontColor: '#4A4A4A',
+                fontSize: '18px',
+            },
+            days: {
+                backgroundColor: '#ffffff',
+                fontColor: '#565555',
+                fontSize: '16px'
+            },
+            todaycolor: 'orange',
+            activeSelectColor: 'orange',
+        }
+    };
+</script>
+<script>
+
+    $(".calendar").on('click', function(){
+        city_name = $(this).attr("data-togo")
+        //触发事件
+        var active = {
+            setTop: function(){
+                var that = this;
+                //多窗口模式，层叠置顶
+                layer.open({
+                    type: 1 //此处以iframe举例
+                    ,title: city_name+'天气采集情况'
+                    ,area: ['400px', '500px']
+                    ,shade: 0
+                    ,maxmin: true
+                    ,offset: [ //为了演示，随机坐标
+                        100
+                        ,100
+                    ]
+                    ,content: $('#container')
+                    ,btn: [] //只是为了演示
+                    ,yes: function(){
+                        $(that).click();
+                    }
+                    ,btn2: function(){
+                        layer.closeAll();
+                    }
+
+                    ,zIndex: layer.zIndex //重点1
+                    ,success: function(layero){
+                        layer.setTop(layero); //重点2
+                    }
+                });
+            }
+        };
+        // console.log("click!");
+        $('#container').empty();
+        var myCalendar = new SimpleCalendar('#container',options);
+        var othis = $(this), method = othis.data('method');
+        active[method] ? active[method].call(this, othis) : '';
+        // set city! and query mark
+        $.ajax({
+            type: 'GET',
+            url: "/api/weather/find?cityName="+ city_name,
+            dataType: "json",
+            success: function (data) {
+                console.log(data)
+                if (data.code == 200000){
+                    result = data.result
+                    for (i=0; i<data.result.length; i++){
+                        insert_timestamp = result[i].insertDate;
+                        myCalendar.addMark(timestamp2date(insert_timestamp),result[i].weather1)
+                    }
+                }else {
+                    alert("请求失败")
+                }
+            }
+        });
+    });
+
+    $(".delete").on('click', function(){
+        city_id = $(this).attr("data-togo")
+        $.ajax({
+            type: 'DELETE',
+            url: "/api/city/delete/"+ city_id,
+            dataType: "json",
+            success: function (data) {
+                // console.log(data)
+                if (data.code == 200000){
+                    window.location.reload()
+                }else {
+                    alert("删除失败")
+                }
+            }
+        });
+    });
+
+    $("#city_add").click(function(){
+        $.ajax({
+            type: 'GET',
+            url: "/api/city/add/"+select_add_cityid,
+            dataType: "json",
+            success: function (data) {
+                console.log(data)
+                if (data.code == 200000){
+                    window.location.reload()
+                }else {
+                    alert("添加失败")
+                }
+            }
+        });
+    });
+</script>
+</html>

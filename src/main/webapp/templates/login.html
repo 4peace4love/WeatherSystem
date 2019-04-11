@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登陆</title>
+    <link rel="stylesheet" th:href="@{/static/layui/css/layui.css}" />
+</head>
+<body>
+<div class="login-main">
+    <header class="layui-elip">后台登录</header>
+    <form class="layui-form" method="POST">
+        <div class="layui-input-inline">
+            <input type="text" name="username" id="username" placeholder="用户名" autocomplete="off" class="layui-input">
+        </div>
+        <div class="layui-input-inline">
+            <input type="password" name="password" id="password" placeholder="密码" autocomplete="off" class="layui-input">
+        </div>
+        <div class="layui-input-inline login-btn">
+            <button class="layui-btn">登录</button>
+        </div>
+        <hr/>
+    </form>
+</div>
+<script th:src="@{/static/layui/layui.js}"></script>
+<script th:src="@{/static/js/jquery.js}"></script>
+<script type="text/javascript">
+    $(".layui-btn").click(function () {
+        username = $("#username").val();
+        password = $("#password").val();
+        $.ajax({
+            type: 'POST',
+            url: "/api/user/login",
+            data: {"username":username, "password":password},
+            dataType: "json",
+            success: function (retData) {
+                if(retData.code == 200000){
+                    console.log("login success");
+                    window.location.href = "/"
+                }
+            },
+            error:function(){
+                console.log("ajax error")
+            }
+        });
+    });
+</script>
+</body>
+</html>
